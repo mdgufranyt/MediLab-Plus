@@ -3,11 +3,57 @@ import doctorModel from "../models/doctorModel.js";
 import appointmentModel from "../models/appointmentModel.js";
 
 const geminiApiKey = process.env.GEMINI_API_KEY?.trim();
-const geminiModelName = process.env.GEMINI_MODEL?.trim() || "gemini-2.5-flash";
 const hasGeminiApiKey = Boolean(
   geminiApiKey && geminiApiKey !== "your_gemini_api_key_here"
 );
 const genAI = hasGeminiApiKey ? new GoogleGenerativeAI(geminiApiKey) : null;
+
+// Free Gemini models to try in order
+const FREE_MODELS = [
+  "gemini-2.5-flash-lite",
+  "gemini-2.5-flash",
+  "gemini-1.5-flash",
+];
+let currentModelIndex = 0;
+
+// Get the next available model
+const getNextModel = () => {
+  const model = FREE_MODELS[currentModelIndex];
+  currentModelIndex = (currentModelIndex + 1) % FREE_MODELS.length;
+  return model;
+};
+
+// Try to execute with model fallback
+const tryWithModelFallback = async (executeFn) => {
+  let lastError;
+  let attemptedModels = [];
+
+  for (let i = 0; i < FREE_MODELS.length; i++) {
+    try {
+      const modelName = FREE_MODELS[i];
+      attemptedModels.push(modelName);
+      console.log(`Trying with model: ${modelName}`);
+
+      const result = await executeFn(modelName);
+      if (i > 0) {
+        console.log(`✓ Successfully switched to model: ${modelName}`);
+      }
+      return result;
+    } catch (error) {
+      lastError = error;
+      console.log(`✗ Model ${FREE_MODELS[i]} failed:`, error.message);
+      
+      // If it's the last model, throw the error
+      if (i === FREE_MODELS.length - 1) {
+        throw new Error(
+          `All models failed. Attempted: ${attemptedModels.join(", ")}. Last error: ${error.message}`
+        );
+      }
+    }
+  }
+
+  throw lastError;
+};
 
 const specialityKeywords = [
   { speciality: "Cardiology", keywords: ["chest pain", "heart", "palpitation", "bp", "blood pressure"] },
@@ -176,10 +222,11 @@ const chatbotMessage = async (req, res) => {
     // Get doctors context
     const doctorsContext = await getAllDoctorsContext();
 
-    // Create AI model
-    const model = genAI.getGenerativeModel({ model: geminiModelName });
+    // Try with model fallback
+    const aiResponse = await tryWithModelFallback(async (modelName) => {
+      const model = genAI.getGenerativeModel({ model: modelName });
 
-    const systemPrompt = `You are MediLab+ AI ChatBot Assistant. You help users find the right doctor and check appointment availability.
+      const systemPrompt = `You are MediLab+ AI ChatBot Assistant. You help users find the right doctor and check appointment availability.
 
 ${doctorsContext}
 
@@ -202,24 +249,25 @@ When suggesting doctors, format your response like:
 "I recommend: Dr. [Name] ([Speciality]) - Consultation Fee: $ [Fee]
 Status: [Available/Fully Booked]"`;
 
-    const chat = model.startChat({
-      history: [
-        {
-          role: "user",
-          parts: [{ text: systemPrompt }],
-        },
-        {
-          role: "model",
-          parts: [
-            { text: "I understand. I'm MediLab+ AI Assistant ready to help!" },
-          ],
-        },
-      ],
-    });
+      const chat = model.startChat({
+        history: [
+          {
+            role: "user",
+            parts: [{ text: systemPrompt }],
+          },
+          {
+            role: "model",
+            parts: [
+              { text: "I understand. I'm MediLab+ AI Assistant ready to help!" },
+            ],
+          },
+        ],
+      });
 
-    // Send user message to AI
-    const result = await chat.sendMessage(userMessage);
-    const aiResponse = result.response.text();
+      // Send user message to AI
+      const result = await chat.sendMessage(userMessage);
+      return result.response.text();
+    });
 
     // Extract all doctor names mentioned and check availability
     const doctorNames = extractDoctorNamesFromText(aiResponse);
@@ -300,9 +348,11 @@ const getDoctorSuggestion = async (req, res) => {
       });
     }
 
-    const model = genAI.getGenerativeModel({ model: geminiModelName });
+    // Try with model fallback
+    const aiResponse = await tryWithModelFallback(async (modelName) => {
+      const model = genAI.getGenerativeModel({ model: modelName });
 
-    const prompt = `Based on the symptom "${symptom}", which doctor speciality from MediLab+ would be most suitable?
+      const prompt = `Based on the symptom "${symptom}", which doctor speciality from MediLab+ would be most suitable?
 
 Available specialities in our system:
 - General Practice
@@ -321,8 +371,9 @@ Please respond with:
 
 Keep response concise and professional.`;
 
-    const result = await model.generateContent(prompt);
-    const aiResponse = result.response.text();
+      const result = await model.generateContent(prompt);
+      return result.response.text();
+    });
 
     // Extract speciality from response
     let speciality = null;
