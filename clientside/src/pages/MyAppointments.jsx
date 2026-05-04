@@ -7,6 +7,7 @@ const MyAppointments = () => {
   const { backendUrl, token, getDoctorsData } = useContext(AppContext);
 
   const [appointments, setAppointments] = useState([]);
+  const [loading, setLoading] = useState(false);
   const months = [
     "",
     "Jan",
@@ -66,11 +67,109 @@ const MyAppointments = () => {
     }
   };
 
+  // Handle Payment with Razorpay
+  const handlePayment = async (appointmentId) => {
+    try {
+      setLoading(true);
+
+      // Step 1: Create Razorpay Order from Backend
+      const orderResponse = await axios.post(
+        backendUrl + "/api/user/create-order",
+        { appointmentId },
+        { headers: { token } }
+      );
+
+      if (!orderResponse.data.success) {
+        toast.error(orderResponse.data.message);
+        setLoading(false);
+        return;
+      }
+
+      const {
+        orderId,
+        amount,
+        currency,
+        userName,
+        userEmail,
+        userPhone,
+      } = orderResponse.data;
+
+      // Step 2: Configure Razorpay Options
+      const options = {
+        key: import.meta.env.VITE_RAZORPAY_KEY_ID,
+        amount: amount * 100, // Amount in paise
+        currency: currency,
+        name: "MediLab+",
+        description: "Appointment Payment",
+        order_id: orderId,
+        handler: async (response) => {
+          try {
+            // Step 3: Verify Payment on Backend
+            const verifyResponse = await axios.post(
+              backendUrl + "/api/user/verify-payment",
+              {
+                razorpay_order_id: response.razorpay_order_id,
+                razorpay_payment_id: response.razorpay_payment_id,
+                razorpay_signature: response.razorpay_signature,
+                appointmentId,
+              },
+              { headers: { token } }
+            );
+
+            if (verifyResponse.data.success) {
+              toast.success("Payment successful!");
+              getUserAppointments();
+            } else {
+              toast.error("Payment verification failed");
+            }
+          } catch (error) {
+            console.log(error);
+            toast.error("Payment verification error");
+          }
+        },
+        prefill: {
+          name: userName,
+          email: userEmail,
+          contact: userPhone,
+        },
+        theme: {
+          color: "#3399cc",
+        },
+      };
+
+      // Step 4: Open Razorpay Modal
+      const rzp1 = new window.Razorpay(options);
+      rzp1.open();
+
+      rzp1.on("payment.failed", function (response) {
+        toast.error("Payment failed: " + response.error.description);
+      });
+
+      setLoading(false);
+    } catch (error) {
+      console.log(error);
+      toast.error("Error initiating payment");
+      setLoading(false);
+    }
+  };
+
   useEffect(() => {
     if (token) {
       getUserAppointments();
     }
   }, [token]);
+
+  // Load Razorpay Script
+  useEffect(() => {
+    const script = document.createElement("script");
+    script.src = "https://checkout.razorpay.com/v1/checkout.js";
+    script.async = true;
+    document.body.appendChild(script);
+
+    return () => {
+      document.body.removeChild(script);
+    };
+  }, []);
 
   return (
     <div>
@@ -107,17 +206,31 @@ const MyAppointments = () => {
             </div>
             <div></div>
             <div className="flex flex-col gap-2 justify-end">
-              {!item.cancelled && !item.isCompleted && (
-                <button className="text-sm text-stone-500 text-center sm:min-w-48 py-2 border rounded hover:bg-primary hover:text-white transition-all duration-300">
-                  Pay Online
+              {!item.cancelled && !item.isCompleted && !item.payment && (
+                <button
+                  onClick={() => handlePayment(item._id)}
+                  disabled={loading}
+                  className="text-sm text-stone-500 text-center sm:min-w-48 py-2 border rounded hover:bg-primary hover:text-white transition-all duration-300 disabled:opacity-50"
+                >
+                  {loading ? "Processing..." : "Pay Online"}
                 </button>
               )}
-              {!item.cancelled && !item.isCompleted && (
+              {!item.cancelled && !item.isCompleted && item.payment && (
+                <button className="sm:min-w-48 py-2 border border-green-500 rounded text-green-500">
+                  Payment Done
+                </button>
+              )}
+              {!item.cancelled && !item.isCompleted && !item.payment && (
                 <button
                   onClick={() => cancelAppointment(item._id)}
                   className="text-sm text-stone-500 text-center sm:min-w-48 py-2 border rounded hover:bg-red-600 hover:text-white transition-all duration-300"
                 >
                   Cancel appointment
+                </button>
+              )}
+              {!item.cancelled && !item.isCompleted && item.payment && (
+                <button className="text-sm text-stone-500 text-center sm:min-w-48 py-2 border border-yellow-500 rounded text-yellow-600 cursor-not-allowed opacity-50">
+                  Cannot Cancel (Paid)
                 </button>
               )}
               {item.cancelled && !item.isCompleted && (

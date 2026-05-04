@@ -197,6 +197,14 @@ const cancelAppointment = async (req, res) => {
       return res.json({ success: false, message: "Unauthorized action" });
     }
 
+    // Prevent cancellation of paid appointments
+    if (appointmentData.payment) {
+      return res.json({
+        success: false,
+        message: "Cannot cancel paid appointments. Please contact support for refund.",
+      });
+    }
+
     await appointmentModel.findByIdAndUpdate(appointmentId, {
       cancelled: true,
     });

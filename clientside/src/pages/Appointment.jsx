@@ -29,15 +29,18 @@ const Appointment = () => {
 
     // getting current date
     let today = new Date();
+    let slotsCount = 0;
+    let dayIndex = 0;
 
-    for (let i = 0; i < 7; i++) {
+    // Keep looping until we have exactly 7 days with available slots
+    while (slotsCount < 7) {
       // getting date with index
       let currentDate = new Date(today);
-      currentDate.setDate(today.getDate() + i);
+      currentDate.setDate(today.getDate() + dayIndex);
 
       // setting end time of the date with index
       let endTime = new Date();
-      endTime.setDate(today.getDate() + i);
+      endTime.setDate(today.getDate() + dayIndex);
       endTime.setHours(21, 0, 0, 0);
 
       // setting hours
@@ -84,7 +87,13 @@ const Appointment = () => {
         currentDate.setMinutes(currentDate.getMinutes() + 30);
       }
 
-      setDocSlots((prev) => [...prev, timeSlots]);
+      // Only add day slot if there are available slots for that day
+      if (timeSlots.length > 0) {
+        setDocSlots((prev) => [...prev, timeSlots]);
+        slotsCount++;
+      }
+
+      dayIndex++;
     }
   };
 

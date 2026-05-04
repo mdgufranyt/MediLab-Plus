@@ -10,6 +10,7 @@ import MyAppointments from "./pages/MyAppointments";
 import Appointment from "./pages/Appointment";
 import Navbar from "./components/Navbar";
 import Footer from "./components/Footer";
+import Chatbot from "./components/Chatbot";
 import { ToastContainer, toast } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
 
@@ -30,6 +31,7 @@ const App = () => {
         <Route path="/appointment/:docId" element={<Appointment />} />
       </Routes>
       <Footer />
+      <Chatbot />
     </div>
   );
 };
