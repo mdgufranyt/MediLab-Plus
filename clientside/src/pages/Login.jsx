@@ -28,6 +28,7 @@ const Login = () => {
           localStorage.setItem("token", data.token);
           setToken(data.token);
           toast.success("Account created successfully! Welcome to MediLab+");
+          // Don't navigate here - let useEffect handle it once userData loads
         } else {
           toast.error(data.message);
         }
@@ -40,6 +41,7 @@ const Login = () => {
           localStorage.setItem("token", data.token);
           setToken(data.token);
           toast.success("Welcome back!");
+          // Don't navigate here - let useEffect handle it once userData loads
         } else {
           toast.error(data.message);
         }
@@ -51,6 +53,8 @@ const Login = () => {
   };
 
   useEffect(() => {
+    // Wait for BOTH token and userData to be available before redirecting
+    // This ensures the profile menu will show on the home page
     if (token && userData) {
       navigate("/");
     }
