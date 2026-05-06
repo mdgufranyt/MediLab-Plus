@@ -186,34 +186,57 @@ The admin panel will run on `http://localhost:5174`
 
 ## 📡 API Endpoints
 
-### User Routes (`/api/user`)
+**Base URL:** `http://localhost:4000` (or your production URL)
 
-- `POST /register` - Register new user
-- `POST /login` - User login
-- `GET /profile` - Get user profile
-- `PUT /update-profile` - Update user profile
-- `POST /book-appointment` - Book an appointment
-- `GET /appointments` - Get user appointments
-- `DELETE /cancel-appointment` - Cancel appointment
+### 👨‍💼 Admin Routes (`/api/admin`)
 
-### Doctor Routes (`/api/doctor`)
+| Method | Endpoint | Description | Auth |
+|--------|----------|-------------|------|
+| POST | `/login` | Admin login | ❌ |
+| POST | `/add-doctor` | Add new doctor (with image) | ✅ |
+| POST | `/all-doctors` | Get all doctors | ✅ |
+| POST | `/change-availability` | Change doctor availability | ✅ |
+| GET | `/appointments` | Get all appointments in system | ✅ |
+| POST | `/cancel-appointment` | Cancel appointment | ✅ |
+| GET | `/dashboard` | Admin dashboard statistics | ✅ |
 
-- `POST /login` - Doctor login
-- `GET /appointments` - Get doctor appointments
-- `PUT /complete-appointment` - Mark appointment as completed
-- `PUT /cancel-appointment` - Cancel appointment
-- `GET /dashboard` - Get doctor dashboard data
-- `GET /profile` - Get doctor profile
-- `PUT /update-profile` - Update doctor profile
+### 🩺 Doctor Routes (`/api/doctor`)
 
-### Admin Routes (`/api/admin`)
+| Method | Endpoint | Description | Auth |
+|--------|----------|-------------|------|
+| GET | `/list` | Get all doctors list | ❌ |
+| POST | `/login` | Doctor login | ❌ |
+| GET | `/appointments` | Get doctor's appointments | ✅ |
+| POST | `/complete-appointment` | Mark appointment complete | ✅ |
+| POST | `/cancel-appointment` | Cancel appointment | ✅ |
+| GET | `/dashboard` | Doctor dashboard statistics | ✅ |
+| GET | `/profile` | Get doctor profile | ✅ |
+| POST | `/update-profile` | Update doctor profile | ✅ |
 
-- `POST /login` - Admin login
-- `POST /add-doctor` - Add new doctor
-- `GET /doctors` - Get all doctors
-- `GET /appointments` - Get all appointments
-- `PUT /cancel-appointment` - Cancel any appointment
-- `GET /dashboard` - Get admin dashboard statistics
+### 👤 User Routes (`/api/user`)
+
+| Method | Endpoint | Description | Auth |
+|--------|----------|-------------|------|
+| POST | `/register` | User registration | ❌ |
+| POST | `/login` | User login | ❌ |
+| GET | `/get-profile` | Get user profile | ✅ |
+| POST | `/update-profile` | Update user profile (with image) | ✅ |
+| POST | `/book-appointment` | Book appointment | ✅ |
+| GET | `/appointments` | Get user's appointments | ✅ |
+| POST | `/cancel-appointment` | Cancel appointment | ✅ |
+| POST | `/create-order` | Create payment order (Razorpay) | ✅ |
+| POST | `/verify-payment` | Verify payment | ✅ |
+
+### 🤖 Chatbot Routes (`/api/chatbot`)
+
+| Method | Endpoint | Description | Auth |
+|--------|----------|-------------|------|
+| POST | `/message` | Send message to chatbot | ❌ |
+| POST | `/suggest-doctor` | Get doctor suggestion based on symptoms | ❌ |
+
+**Legend:** ✅ = Authentication Required | ❌ = No Authentication Required
+
+**Total Endpoints:** 28 (9 public + 19 protected)
 
 ## 🔐 Authentication
 
